@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Books & Chapters Reader</title>
+  <style>
+    :root {
+      --bg-light: #f9f9f9;
+      --bg-dark: #121212;
+      --text-light: #222;
+      --text-dark: #f0f0f0;
+      --box-light: #fff;
+      --box-dark: #1e1e1e;
+      --border-light: #ccc;
+      --border-dark: #444;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: var(--bg-light);
+      color: var(--text-light);
+      transition: background 0.3s, color 0.3s;
+    }
+
+    body.dark {
+      background: var(--bg-dark);
+      color: var(--text-dark);
+    }
+
+    .mobile, .desktop {
+      display: none;
+    }
+
+    @media (max-width: 767px) {
+      .mobile {
+        display: block;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .desktop {
+        display: block;
+      }
+    }
+
+    .theme-toggle {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      font-size: 24px;
+      cursor: pointer;
+      user-select: none;
+      z-index: 1000;
+    }
+
+    .folder, .file, .back-button {
+      cursor: pointer;
+      padding: 10px 16px;
+      margin: 5px auto;
+      border: 1px solid var(--border-light);
+      border-radius: 8px;
+      width: fit-content;
+      max-width: 90%;
+      background: var(--box-light);
+      color: inherit;
+      transition: background-color 0.2s, border 0.3s;
+    }
+
+    body.dark .folder, 
+    body.dark .file,
+    body.dark .back-button {
+      background: var(--box-dark);
+      border: 1px solid var(--border-dark);
+    }
+
+    .folder,.file {
+      width: 70%;
+    }
+
+    .folder:hover, .file:hover, .back-button:hover {
+      background-color: #ddd;
+    }
+
+    body.dark .folder:hover, 
+    body.dark .file:hover, 
+    body.dark .back-button:hover {
+      background-color: #2a2a2a;
+    }
+
+    #container, #chapters, #reader {
+      margin-top: 20px;
+      display: none;
+    }
+
+    #container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #reader {
+      text-align: left;
+      padding-left: 10%;
+      padding-right: 10%;
+      margin: 0 auto;
+    }
+
+    #tit {
+      font-size: 28px;
+      color: inherit;
+      margin-bottom: 30px;
+    }
+
+    .doc-text {
+      font-size: 18px;
+      line-height: 1.8;
+      margin-bottom: 1em;
+      color: inherit;
+    }
+
+    .doc-image {
+      max-width: 100%;
+      margin: 20px 0;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    #nav-buttons {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 20px;
+    }
+
+    .error {
+      color: red;
+    }
+
+    @font-face {
+      font-family: 'TamilBble';
+      src: url('TamilBble.ttf') format('truetype');
+    }
+
+    #docx-content,
+    #tit {
+      font-family: 'TamilBble', sans-serif;
+      animation: fadeInSlide 0.8s ease forwards;
+      opacity: 0;
+    }
+
+    @keyframes fadeInSlide {
+      0% {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .conEng {
+      padding: 5px;
+      display: inline;
+      border-radius: 4px;
+      color: #004;
+      font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    }
+
+    .heddd {
+      font-weight: bold;
+      color: #d33;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline;
+    }
+
+    .nav-desktop {
+      background-color: blanchedalmond;
+    }
+
+    #chapter-back-button {
+      width: 50%;
+      font-size: 30px;
+    }
+
+    .back-button {
+      width: 30%;
+    }
+
+    .doc-image-div{
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .imgs{
+        width: 50%;
+        height: 50%;
+    }
+  </style>
+</head>
+<body>
+  <div class="theme-toggle" onclick="toggleTheme()">🌙</div>
+
+  <div>
+    <h2 id="main-title">📚 Books</h2>
+  </div>
+
+  <div id="container">Loading books...</div>
+  <div class="bbbtn"></div>
+  <div id="chapters"></div>
+
+  <div id="reader">
+    <h1 id="tit"></h1>
+    <div id="docx-content"></div>
+    <div id="error" class="error"></div>
+    <div id="nav-buttons"></div>
+    <div id="chapter-back-button" class="back-button" onclick="backToChapters()">⬅️ Back to Chapters</div>
+  </div>
+
+  <script>
+    const container = document.getElementById('container');
+    const chaptersDiv = document.getElementById('chapters');
+    const reader = document.getElementById('reader');
+    const titleEl = document.getElementById('tit');
+    const contentDiv = document.getElementById('docx-content');
+    const errorDiv = document.getElementById('error');
+    const navButtons = document.getElementById('nav-buttons');
+    const mainTitle = document.getElementById('main-title');
+    const chapterbackbutton = document.getElementById('chapter-back-button');
+    const themeToggle = document.querySelector('.theme-toggle');
+
+    let rootData = null;
+    let currentBook = null;
+    let bookChapters = [];
+    let currentChapterPath = null;
+
+    function toggleTheme() {
+      const isDark = document.body.classList.toggle('dark');
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      themeToggle.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      if (savedTheme === 'dark') {
+        document.body.classList.add('dark');
+        themeToggle.textContent = '☀️';
+      } else {
+        themeToggle.textContent = '🌙';
+      }
+    }
+
+    async function loadData() {
+      try {
+        const res = await fetch("http://localhost:5000/titles");
+        rootData = await res.json();
+        showBooks();
+      } catch (err) {
+        container.innerHTML = "❌ Failed to load books.";
+      }
+    }
+
+    function showBooks() {
+      mainTitle.textContent = "📚 Books";
+      container.innerHTML = '';
+      container.style.display = 'block';
+      chaptersDiv.style.display = 'none';
+      reader.style.display = 'none';
+
+      rootData.items.forEach(book => {
+        if (book.isfolder) {
+          const div = document.createElement('div');
+          div.className = 'folder';
+          div.textContent = book.name;
+          div.onclick = () => {
+            currentBook = book;
+            showChapters(book);
+          };
+          container.appendChild(div);
+        }
+      });
+    }
+
+    function showChapters(book) {
+      mainTitle.textContent = `📖 ${book.name}`;
+      container.style.display = 'none';
+      chaptersDiv.style.display = 'block';
+      chaptersDiv.innerHTML = '';
+
+      const backBtn = document.createElement('div');
+      backBtn.className = 'back-button';
+      backBtn.textContent = '⬅️ Back to Books';
+      backBtn.onclick = showBooks;
+      chaptersDiv.appendChild(backBtn);
+
+      bookChapters = book.items.filter(item => !item.isfolder);
+
+      book.items.forEach(chap => {
+        const div = document.createElement('div');
+        div.className = 'file';
+        div.textContent = chap.name;
+        div.onclick = () => {
+          currentChapterPath = chap.path;
+          loadChapter(chap.path);
+        };
+        chaptersDiv.appendChild(div);
+      });
+    }
+
+    async function loadChapter(path) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      mainTitle.style.display = 'none';
+      chaptersDiv.style.display = 'none';
+      reader.style.display = 'block';
+      contentDiv.innerHTML = '⏳ ...';
+      titleEl.innerHTML = '';
+      errorDiv.innerHTML = '';
+      navButtons.innerHTML = '';
+      chapterbackbutton.style.display = 'block';
+
+      try {
+        const res = await fetch(`http://localhost:5000/content?path=${encodeURIComponent(path)}`);
+        const data = await res.json();
+
+        if (data.error) {
+          errorDiv.textContent = data.error;
+          return;
+        }
+
+        contentDiv.innerHTML = '';
+        data.content = data.content.map((item) => {
+          if (item.type === 'text') {
+            item.data = item.data
+              .replace(/{/g, '<div class="conEng">')
+              .replace(/}/g, '</div>')
+              .replace(/“([^”]+)”/g, '<div class="heddd">“$1”</div>');
+          }
+          return item;
+        });
+
+        titleEl.style.opacity = 0;
+        contentDiv.style.opacity = 0;
+
+        let imageGroup = null;
+
+        data.content.forEach((item, i) => {
+        if (item.type === 'text') {
+            // Reset image group if any
+            imageGroup = null;
+
+            const p = document.createElement('p');
+            p.className = 'doc-text';
+            p.innerHTML = item.data;
+            if (i === 0) titleEl.textContent = item.data;
+            else contentDiv.appendChild(p);
+        } else if (item.type === 'image') {
+            // If we don't have an active group, create one
+            if (!imageGroup) {
+            imageGroup = document.createElement('div');
+            imageGroup.className = 'doc-image-div';
+            contentDiv.appendChild(imageGroup);
+            }
+
+            const img = document.createElement('img');
+            img.src = item.data;
+            img.className = 'doc-image imgs';
+            imageGroup.appendChild(img);
+        }
+        });
+
+
+        setTimeout(() => {
+          titleEl.style.opacity = 1;
+          contentDiv.style.opacity = 1;
+        }, 50);
+
+        const index = bookChapters.findIndex(ch => ch.path === path);
+        if (index > 0) {
+          const prevBtn = document.createElement('button');
+          prevBtn.textContent = '⬅️ Previous';
+          prevBtn.className = 'back-button';
+          prevBtn.onclick = () => loadChapter(bookChapters[index - 1].path);
+          navButtons.appendChild(prevBtn);
+        }
+        if (index < bookChapters.length - 1) {
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = 'Next ➡️';
+          nextBtn.className = 'back-button';
+          nextBtn.onclick = () => loadChapter(bookChapters[index + 1].path);
+          navButtons.appendChild(nextBtn);
+        }
+
+      } catch (err) {
+        errorDiv.textContent = '❌ Failed to load content.';
+      }
+    }
+
+    function backToChapters() {
+      showChapters(currentBook);
+      contentDiv.textContent = '';
+      titleEl.textContent = '';
+      chapterbackbutton.style.display = 'none';
+      navButtons.innerHTML = '';
+      mainTitle.style.display = 'block';
+    }
+
+    initTheme();
+    loadData();
+  </script>
+</body>
+</html>

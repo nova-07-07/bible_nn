@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Document Viewer & Reader</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 40px;
+      text-align: center;
+      background: #f9f9f9;
+    }
+
+    .mobile, .desktop {
+      display: none;
+    }
+
+    @media (max-width: 767px) {
+      .mobile {
+        display: block;
+      }
+    }
+
+    @media (min-width: 768px) {
+      .desktop {
+        display: block;
+      }
+    }
+
+    .folder, .file, .back-button {
+      cursor: pointer;
+      padding: 10px 16px;
+      margin: 5px auto;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      width: fit-content;
+      max-width: 90%;
+      background: #fff;
+      transition: background-color 0.2s;
+    }
+
+    .folder:hover, .file:hover, .back-button:hover {
+      background-color: #eee;
+    }
+
+    #container, #reader {
+      margin-top: 20px;
+    }
+
+    #reader {
+      display: none;
+      text-align: left;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    @font-face {
+      font-family: 'TamilBble';
+      src: url('TamilBble.ttf') format('truetype');
+    }
+
+    #docx-content {
+      font-family: 'TamilBble', sans-serif;
+      animation: fadeInSlide 0.8s ease forwards;
+      opacity: 0;
+    }
+
+    #tit {
+      font-family: 'TamilBble', sans-serif;
+      font-size: 28px;
+      color: #222;
+      margin-bottom: 30px;
+      animation: fadeInSlide 0.6s ease both;
+    }
+
+    .doc-text {
+      font-size: 18px;
+      line-height: 1.8;
+      margin-bottom: 1em;
+      color: #333;
+      animation: fadeInSlide 0.6s ease both;
+    }
+
+    .doc-image {
+      max-width: 100%;
+      margin: 20px 0;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+      animation: fadeInSlide 0.6s ease both;
+    }
+
+    .conEng {
+      padding: 5px;
+      display: inline;
+      border-radius: 4px;
+      color: #004;
+      font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
+    }
+
+    .heddd {
+      font-weight: bold;
+      color: #600;
+      padding: 2px 6px;
+      border-radius: 4px;
+      display: inline;
+    }
+
+    .error {
+      color: red;
+    }
+
+    #nav-buttons {
+      margin-top: 40px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    @keyframes fadeInSlide {
+      0% {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="mobile">
+    <p>📱 You are viewing this on a <strong>mobile device</strong>.</p>
+  </div>
+
+  <div class="desktop">
+    <h2 id="main-title">📂 Books</h2>
+    <div id="container">Loading...</div>
+
+    <div id="reader">
+      <div id="content">Loading...</div>
+      <h1 id="tit"></h1>
+      <div id="docx-content"></div>
+      <div id="error" class="error"></div>
+      <div id="nav-buttons"></div>
+      <div class="back-button" onclick="goBack()">⬅️ Back to Chapters</div>
+    </div>
+  </div>
+
+  <script>
+    const container = document.getElementById('container');
+    const reader = document.getElementById('reader');
+    const titleEl = document.getElementById('tit');
+    const contentDiv = document.getElementById('docx-content');
+    const errorDiv = document.getElementById('error');
+    const contentLoading = document.getElementById('content');
+    const mainTitle = document.getElementById('main-title');
+    const navButtons = document.getElementById('nav-buttons');
+
+    let rootData = null;
+    let parentStack = [];
+    let allFiles = [];
+
+    async function loadData() {
+      try {
+        const response = await fetch("http://localhost:5000/titles");
+        const data = await response.json();
+        rootData = data;
+
+        allFiles = [];
+        collectAllFiles(data);
+
+        displayItems(data);
+      } catch (error) {
+        container.innerHTML = "❌ Failed to load data.";
+        console.error("Error fetching data:", error);
+      }
+    }
+
+    function collectAllFiles(node) {
+      node.items.forEach(item => {
+        if (item.isfolder) {
+          collectAllFiles(item);
+        } else {
+          allFiles.push(item);
+        }
+      });
+    }
+
+    function displayItems(node) {
+      mainTitle.textContent = "📂 Chapters";
+      container.style.display = "block";
+      reader.style.display = "none";
+      container.innerHTML = '';
+
+      if (parentStack.length > 0) {
+        const backBtn = document.createElement('div');
+        backBtn.className = 'back-button';
+        backBtn.textContent = '⬅️ Back';
+        backBtn.onclick = () => {
+          const previous = parentStack.pop();
+          displayItems(previous);
+        };
+        container.appendChild(backBtn);
+      }
+
+      node.items.forEach(item => {
+        const div = document.createElement('div');
+        div.className = item.isfolder ? 'folder' : 'file';
+        div.textContent = item.name;
+
+        div.onclick = () => {
+          if (item.isfolder) {
+            parentStack.push(node);
+            displayItems(item);
+          } else {
+            location.hash = `#read=${encodeURIComponent(item.path)}`;
+          }
+        };
+
+        container.appendChild(div);
+      });
+    }
+
+    async function loadContent(path) {
+      mainTitle.style.display = "none";
+      container.style.display = "none";
+      reader.style.display = "block";
+      contentDiv.innerHTML = '';
+      titleEl.innerHTML = '';
+      errorDiv.innerHTML = '';
+      navButtons.innerHTML = '';
+      contentLoading.style.display = "block";
+      contentLoading.textContent = "Loading...";
+
+      try {
+        const response = await fetch(`http://localhost:5000/content?path=${encodeURIComponent(path)}`);
+        const data = await response.json();
+        contentLoading.style.display = "none";
+
+        if (data.error) {
+          errorDiv.textContent = 'Error: ' + data.error;
+          return;
+        }
+
+        data.content = data.content.map((item) => {
+          if (item.type === 'text') {
+            item.data = item.data
+              .replace(/{/g, '<div class="conEng">')
+              .replace(/}/g, '</div>')
+              .replace(/“([^”]+)”/g, '<div class="heddd">“$1”</div>');
+          }
+          return item;
+        });
+
+        data.content.forEach((item, index) => {
+          if (item.type === 'text') {
+            if (index === 0) {
+              titleEl.textContent = item.data;
+            } else {
+              const p = document.createElement('p');
+              p.innerHTML = item.data;
+              p.classList.add('doc-text');
+              contentDiv.appendChild(p);
+            }
+          } else if (item.type === 'image') {
+            const img = document.createElement('img');
+            img.src = item.data;
+            img.classList.add('doc-image');
+            contentDiv.appendChild(img);
+          }
+        });
+
+        // Show prev/next buttons
+        const currentIndex = allFiles.findIndex(f => f.path === path);
+
+        if (currentIndex > 0) {
+          const prevBtn = document.createElement('button');
+          prevBtn.textContent = '⬅️ Previous';
+          prevBtn.className = 'back-button';
+          prevBtn.onclick = () => {
+            const prevItem = allFiles[currentIndex - 1];
+            location.hash = `#read=${encodeURIComponent(prevItem.path)}`;
+          };
+          navButtons.appendChild(prevBtn);
+        }
+
+        if (currentIndex < allFiles.length - 1) {
+          const nextBtn = document.createElement('button');
+          nextBtn.textContent = 'Next ➡️';
+          nextBtn.className = 'back-button';
+          nextBtn.onclick = () => {
+            const nextItem = allFiles[currentIndex + 1];
+            location.hash = `#read=${encodeURIComponent(nextItem.path)}`;
+          };
+          navButtons.appendChild(nextBtn);
+        }
+
+      } catch (err) {
+        errorDiv.textContent = 'Failed to load content.';
+        console.error(err);
+      }
+    }
+
+    function goBack() {
+      history.pushState('', document.title, window.location.pathname + window.location.search);
+      displayItems(rootData);
+    }
+
+    window.addEventListener('hashchange', () => {
+      const hash = location.hash;
+      if (hash.startsWith('#read=')) {
+        const path = decodeURIComponent(hash.split('=')[1]);
+        loadContent(path);
+      } else {
+        goBack();
+      }
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
