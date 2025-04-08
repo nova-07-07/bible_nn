@@ -138,9 +138,10 @@
     }
 
     @font-face {
-        font-family: 'TamilBble';
-        src: url('./TamilBble.TTF') format('truetype');
+    font-family: 'TamilBble';
+    src: url('/TamilBble.TTF') format('truetype');
     }
+
 
 
     #docx-content,
@@ -161,11 +162,21 @@
       }
     }
 
+    @keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+    }
+
+
     .conEng {
       padding: 5px;
       display: inline;
       border-radius: 4px;
-      color: #004;
+      color: rgb(0, 68, 52);
       font-family: 'Franklin Gothic Medium', 'Arial Narrow', Arial, sans-serif;
     }
 
@@ -208,7 +219,7 @@
     <h2 id="main-title">📚 Books</h2>
   </div>
 
-  <div id="container">Loading books...</div>
+  <div id="container"><div class="loader">⏳</div>  Loading books...</div>
   <div class="bbbtn"></div>
   <div id="chapters"></div>
 
@@ -316,6 +327,7 @@
       chaptersDiv.style.display = 'none';
       reader.style.display = 'block';
       contentDiv.innerHTML = '⏳ ...';
+      contentDiv.className = 'loader';
       titleEl.innerHTML = '';
       errorDiv.innerHTML = '';
       navButtons.innerHTML = '';
