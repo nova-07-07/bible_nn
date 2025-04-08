@@ -254,7 +254,7 @@
 
     async function loadData() {
       try {
-        const res = await fetch("http://localhost:5000/titles");
+        const res = await fetch("https://bb1-aw2p.onrender.com/titles");
         rootData = await res.json();
         showBooks();
       } catch (err) {
@@ -321,7 +321,7 @@
       chapterbackbutton.style.display = 'block';
 
       try {
-        const res = await fetch(`http://localhost:5000/content?path=${encodeURIComponent(path)}`);
+        const res = await fetch(`https://bb1-aw2p.onrender.com/content?path=${encodeURIComponent(path)}`);
         const data = await res.json();
 
         if (data.error) {
