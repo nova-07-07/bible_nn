@@ -23,7 +23,7 @@ def normalize_path(path):
 def traverse(directory, file_extension=None):
     items = []
     try:
-        entries = sorted(os.scandir(directory), key=lambda e: e.name.lower())  # Sort by name (case-insensitive)
+        entries = sorted(os.scandir(directory), key=lambda e: e.name.lower())  
         for entry in entries:
             if entry.is_dir():
                 sub_items = traverse(entry.path, file_extension)
