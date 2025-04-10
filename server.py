@@ -23,7 +23,8 @@ def normalize_path(path):
 def traverse(directory, file_extension=None):
     items = []
     try:
-        for entry in os.scandir(directory):
+        entries = sorted(os.scandir(directory), key=lambda e: e.name.lower())  # Sort by name (case-insensitive)
+        for entry in entries:
             if entry.is_dir():
                 sub_items = traverse(entry.path, file_extension)
                 if sub_items or file_extension is None:
@@ -42,6 +43,7 @@ def traverse(directory, file_extension=None):
     except PermissionError:
         return []
     return items
+
 
 @app.route('/titles', methods=['GET'])
 def get_titles():
